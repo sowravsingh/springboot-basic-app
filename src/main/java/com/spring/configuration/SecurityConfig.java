@@ -53,14 +53,17 @@ public class SecurityConfig {
 //    }
 
     @Bean
-    public SecurityFilterChain  (HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.authorizeHttpRequests(auth -> auth
-                        .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
-                        .anyRequest().authenticated())
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(auth -> auth
+                                .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
+                                .requestMatchers(new AntPathRequestMatcher("/api/getUserById")).hasRole("USER")
+                .anyRequest().authenticated()
+                )
                 .csrf(csrf -> csrf.disable())
-                .headers(headers -> headers
-                        .frameOptions().sameOrigin())
-                .httpBasic(Customizer.withDefaults());
-        return httpSecurity.build();
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+                .httpBasic(Customizer.withDefaults())
+                .formLogin(Customizer.withDefaults());
+
+        return http.build();
     }
 }
