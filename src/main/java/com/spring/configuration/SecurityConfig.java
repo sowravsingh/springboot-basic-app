@@ -53,7 +53,7 @@ public class SecurityConfig {
 //    }
 
     @Bean
-    public SecurityFilterChain getSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
+    public SecurityFilterChain  (HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(auth -> auth
                         .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
                         .anyRequest().authenticated())
