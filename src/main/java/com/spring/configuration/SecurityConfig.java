@@ -7,6 +7,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -52,18 +53,40 @@ public class SecurityConfig {
 //
 //    }
 
+    ///  custom security filter chain for Form Based Authentication method
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//        http.authorizeHttpRequests(auth -> auth
+//                                .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
+//                                .requestMatchers(new AntPathRequestMatcher("/api/getUserById")).hasRole("USER")
+//                .anyRequest().authenticated()
+//                )
+//                .sessionManagement(session -> session.maximumSessions(1)
+//                        .maxSessionsPreventsLogin(true))
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+//                .csrf(csrf -> csrf.disable())
+//                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+//                .formLogin(Customizer.withDefaults());
+//
+//        return http.build();
+//    }
+
+
+    ///  custom security filter chain for Form Based Authentication method
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
-                                .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
-                                .requestMatchers(new AntPathRequestMatcher("/api/getUserById")).hasRole("USER")
-                .anyRequest().authenticated()
+                        .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/getUserById")).hasRole("USER")
+                        .anyRequest().authenticated()
                 )
+                .sessionManagement(session -> session.maximumSessions(1)
+                        .maxSessionsPreventsLogin(true))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-                .httpBasic(Customizer.withDefaults())
-                .formLogin(Customizer.withDefaults());
-
+                .httpBasic(Customizer.withDefaults());
         return http.build();
     }
 }
