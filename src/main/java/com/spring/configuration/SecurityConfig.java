@@ -1,8 +1,16 @@
 package com.spring.configuration;
 
+import com.spring.Providers.JWTValidationProvider;
+import com.spring.Utils.JWTUtil;
+import com.spring.filters.JWTAuthenticationFilter;
+import com.spring.filters.JWTRefreshFilter;
+import com.spring.filters.JWTValidationFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,26 +23,49 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
+import java.util.Arrays;
 
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private JWTUtil jwtUtil;
+    private UserDetailsService userDetailsService;
+
     @Bean
     public PasswordEncoder getPasswordEncoder(){
         return new BCryptPasswordEncoder();
     }
 
+    @Autowired
+    public SecurityConfig(JWTUtil jwtUtil,UserDetailsService userDetailsService){
+        this.jwtUtil= jwtUtil;
+        this.userDetailsService= userDetailsService;
+    }
 
     @Bean
-    public AuthenticationProvider authenticationProvider(UserDetailsService userDetailsService) {
+    public JWTValidationProvider jwtValidationProvider(){
+        return new JWTValidationProvider(jwtUtil,userDetailsService);
+    }
+
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(getPasswordEncoder()); // use same encoder used while saving password
         return authProvider;
     }
+
+
+    @Bean
+    public AuthenticationManager authenticationManager(){
+        return new ProviderManager(Arrays.asList(authenticationProvider(),jwtValidationProvider()));
+    }
+
 
 //    @Bean
 //    public UserDetailsService getUserDetailsService(){
@@ -72,21 +103,44 @@ public class SecurityConfig {
 //    }
 
 
-    ///  custom security filter chain for Form Based Authentication method
+    ///  custom security filter chain for Basic Authentication method
+
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//        http.authorizeHttpRequests(auth -> auth
+//                        .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
+//                        .requestMatchers(new AntPathRequestMatcher("/api/getUserById")).hasRole("USER")
+//                        .anyRequest().authenticated()
+//                )
+//                .sessionManagement(session -> session.maximumSessions(1)
+//                        .maxSessionsPreventsLogin(true))
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//                .csrf(csrf -> csrf.disable())
+//                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+//                .httpBasic(Customizer.withDefaults());
+//        return http.build();
+//    }
+
+
+    ///  custom security filter chain for JWT authentication method
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,AuthenticationManager authenticationManager,JWTUtil jwtUtil) throws Exception {
+
+        JWTAuthenticationFilter jwtAuthenticationFilter = new JWTAuthenticationFilter(authenticationManager,jwtUtil);
+        JWTValidationFilter jwtValidationFilter = new JWTValidationFilter(authenticationManager);
+        JWTRefreshFilter jwtRefreshFilter = new JWTRefreshFilter(authenticationManager,jwtUtil);
+
+
         http.authorizeHttpRequests(auth -> auth
                         .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
-                        .requestMatchers(new AntPathRequestMatcher("/api/getUserById")).hasRole("USER")
-                        .anyRequest().authenticated()
-                )
-                .sessionManagement(session -> session.maximumSessions(1)
-                        .maxSessionsPreventsLogin(true))
+                        .requestMatchers(new AntPathRequestMatcher("/api/saveUserDetails")).hasRole("ADMIN")
+                        .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(csrf -> csrf.disable())
-                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-                .httpBasic(Customizer.withDefaults());
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(jwtValidationFilter,JWTAuthenticationFilter.class)
+                .addFilterAfter(jwtRefreshFilter, JWTValidationFilter.class);
         return http.build();
     }
 }
