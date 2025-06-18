@@ -2,9 +2,8 @@ package com.spring.configuration;
 
 import com.spring.Providers.JWTValidationProvider;
 import com.spring.Utils.JWTUtil;
-import com.spring.filters.JWTAuthenticationFilter;
-import com.spring.filters.JWTRefreshFilter;
-import com.spring.filters.JWTValidationFilter;
+import com.spring.Utils.OAuthTokenValidatorUtil;
+import com.spring.filters.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -52,19 +51,27 @@ public class SecurityConfig {
         return new JWTValidationProvider(jwtUtil,userDetailsService);
     }
 
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(getPasswordEncoder()); // use same encoder used while saving password
-        return authProvider;
-    }
+    @Autowired
+    OAuthTokenValidatorUtil oAuthTokenValidatorUtil;
 
 
-    @Bean
-    public AuthenticationManager authenticationManager(){
-        return new ProviderManager(Arrays.asList(authenticationProvider(),jwtValidationProvider()));
-    }
+
+    ///  creating custom authentication provider  for jwt
+
+//    @Bean
+//    public AuthenticationProvider authenticationProvider() {
+//        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+//        authProvider.setUserDetailsService(userDetailsService);
+//        authProvider.setPasswordEncoder(getPasswordEncoder()); // use same encoder used while saving password
+//        return authProvider;
+//    }
+
+      ///  creating custom authentication manager with provider list   for jwt
+
+//    @Bean
+//    public AuthenticationManager authenticationManager(){
+//        return new ProviderManager(Arrays.asList(authenticationProvider(),jwtValidationProvider()));
+//    }
 
 
 //    @Bean
@@ -124,23 +131,41 @@ public class SecurityConfig {
 
     ///  custom security filter chain for JWT authentication method
 
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http,AuthenticationManager authenticationManager,JWTUtil jwtUtil) throws Exception {
+//
+//        JWTAuthenticationFilter jwtAuthenticationFilter = new JWTAuthenticationFilter(authenticationManager,jwtUtil);
+//        JWTValidationFilter jwtValidationFilter = new JWTValidationFilter(authenticationManager);
+//        JWTRefreshFilter jwtRefreshFilter = new JWTRefreshFilter(authenticationManager,jwtUtil);
+//
+//
+//        http.authorizeHttpRequests(auth -> auth
+//                        .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
+//                        .requestMatchers(new AntPathRequestMatcher("/api/saveUserDetails")).hasRole("ADMIN")
+//                        .anyRequest().authenticated())
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//                .csrf(csrf -> csrf.disable())
+//                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+//                .addFilterAfter(jwtValidationFilter,JWTAuthenticationFilter.class)
+//                .addFilterAfter(jwtRefreshFilter, JWTValidationFilter.class);
+//        return http.build();
+//    }
+
+
+    ///  custom security filter chain for oauth2
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http,AuthenticationManager authenticationManager,JWTUtil jwtUtil) throws Exception {
-
-        JWTAuthenticationFilter jwtAuthenticationFilter = new JWTAuthenticationFilter(authenticationManager,jwtUtil);
-        JWTValidationFilter jwtValidationFilter = new JWTValidationFilter(authenticationManager);
-        JWTRefreshFilter jwtRefreshFilter = new JWTRefreshFilter(authenticationManager,jwtUtil);
-
-
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, CustomOauth2SuccessHandler customOauth2SuccessHandler) throws Exception {
         http.authorizeHttpRequests(auth -> auth
-                        .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
-                        .requestMatchers(new AntPathRequestMatcher("/api/saveUserDetails")).hasRole("ADMIN")
                         .anyRequest().authenticated())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(csrf -> csrf.disable())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(jwtValidationFilter,JWTAuthenticationFilter.class)
-                .addFilterAfter(jwtRefreshFilter, JWTValidationFilter.class);
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2Login(oauth -> oauth
+                        .successHandler(customOauth2SuccessHandler))
+                .addFilterBefore(new OAuthValidationFilter(oAuthTokenValidatorUtil), UsernamePasswordAuthenticationFilter.class)
+                .oauth2Login(Customizer.withDefaults());
+
         return http.build();
     }
+
 }

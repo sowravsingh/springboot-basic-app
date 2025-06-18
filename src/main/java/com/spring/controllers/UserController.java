@@ -24,6 +24,16 @@ public class UserController {
     @Autowired
     private UserAuthEntityService userAuthEntityService;
 
+    @GetMapping("/")
+    public ResponseEntity<String> entryApi(){
+        return ResponseEntity.status(HttpStatus.OK).body("hi welcome to dashboard");
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<String> normalFetchApi(){
+        return ResponseEntity.status(HttpStatus.OK).body("user details fetched successfully");
+    }
+
     @PostMapping("/api/saveAddress")
     public ResponseEntity<String> saveAddressDetails(@RequestBody UserAddress userAddress){
         System.out.println(userAddress);
