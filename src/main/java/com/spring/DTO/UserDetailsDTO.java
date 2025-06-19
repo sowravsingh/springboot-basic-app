@@ -6,10 +6,13 @@ import java.lang.ref.PhantomReference;
 
 public class UserDetailsDTO {
 
-    private Long id;
+    public Long id;
     private String name;
     private String phoneNo;
     private String city;
+
+    public UserDetailsDTO() {
+    }
 
     public UserDetailsDTO(UserDetails userDetails) {
         this.id = userDetails.getId();

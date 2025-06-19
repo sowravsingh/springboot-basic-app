@@ -1,19 +1,23 @@
 package com.spring.Entities;
 
+import org.hibernate.engine.internal.Cascade;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
-public class UserAuthEntity implements UserDetails {
+public class UserAuthEntity implements UserDetails, Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    public Long id;
 
     @Column(unique = true,nullable = false)
     private String userName;
@@ -22,6 +26,17 @@ public class UserAuthEntity implements UserDetails {
     private String password;
 
     private String role;
+
+    @OneToMany(cascade= CascadeType.ALL,fetch = FetchType.EAGER)
+    private List<UserPermissionEntity> userPermissionEntityList;
+
+    public List<UserPermissionEntity> getUserPermissionEntityList() {
+        return userPermissionEntityList;
+    }
+
+    public void setUserPermissionEntityList(List<UserPermissionEntity> userPermissionEntityList) {
+        this.userPermissionEntityList = userPermissionEntityList;
+    }
 
     public void setRole(String role) {
         this.role = role;
@@ -41,7 +56,12 @@ public class UserAuthEntity implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role));
+        Set<GrantedAuthority> authorities = new HashSet<>();
+        authorities.add(new SimpleGrantedAuthority(role));
+
+        userPermissionEntityList.forEach(permission ->authorities.add(new SimpleGrantedAuthority(permission.getPermission())));
+
+        return authorities;
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.spring.Providers.JWTValidationProvider;
 import com.spring.Utils.JWTUtil;
 import com.spring.Utils.OAuthTokenValidatorUtil;
 import com.spring.filters.*;
+import com.spring.serivces.UserAuthEntityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -30,41 +32,47 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private JWTUtil jwtUtil;
-    private UserDetailsService userDetailsService;
+//    private JWTUtil jwtUtil;
+//    private UserDetailsService userDetailsService;
 
     @Bean
     public PasswordEncoder getPasswordEncoder(){
         return new BCryptPasswordEncoder();
     }
 
-    @Autowired
-    public SecurityConfig(JWTUtil jwtUtil,UserDetailsService userDetailsService){
-        this.jwtUtil= jwtUtil;
-        this.userDetailsService= userDetailsService;
-    }
-
-    @Bean
-    public JWTValidationProvider jwtValidationProvider(){
-        return new JWTValidationProvider(jwtUtil,userDetailsService);
-    }
+//    @Autowired
+//    public SecurityConfig(JWTUtil jwtUtil,UserDetailsService userDetailsService){
+//        this.jwtUtil= jwtUtil;
+//        this.userDetailsService= userDetailsService;
+//    }
+//
+//    @Bean
+//    public JWTValidationProvider jwtValidationProvider(){
+//        return new JWTValidationProvider(jwtUtil,userDetailsService);
+//    }
 
     @Autowired
     OAuthTokenValidatorUtil oAuthTokenValidatorUtil;
 
 
 
-    ///  creating custom authentication provider  for jwt
+    @Bean
+    public UserDetailsService userDetailsService() {
+        return new UserAuthEntityService();
+    }
 
-//    @Bean
-//    public AuthenticationProvider authenticationProvider() {
-//        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-//        authProvider.setUserDetailsService(userDetailsService);
-//        authProvider.setPasswordEncoder(getPasswordEncoder()); // use same encoder used while saving password
-//        return authProvider;
-//    }
+    ///  creating custom authentication provider  for jwt and also required for Form based auth method
+
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService());
+        authProvider.setPasswordEncoder(getPasswordEncoder()); // use same encoder used while saving password
+        return authProvider;
+    }
 
       ///  creating custom authentication manager with provider list   for jwt
 
@@ -92,22 +100,22 @@ public class SecurityConfig {
 //    }
 
     ///  custom security filter chain for Form Based Authentication method
-//    @Bean
-//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//        http.authorizeHttpRequests(auth -> auth
-//                                .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
-//                                .requestMatchers(new AntPathRequestMatcher("/api/getUserById")).hasRole("USER")
-//                .anyRequest().authenticated()
-//                )
-//                .sessionManagement(session -> session.maximumSessions(1)
-//                        .maxSessionsPreventsLogin(true))
-//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-//                .csrf(csrf -> csrf.disable())
-//                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-//                .formLogin(Customizer.withDefaults());
-//
-//        return http.build();
-//    }
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(auth -> auth
+                                .requestMatchers(new AntPathRequestMatcher("/api/registerUser")).permitAll()
+                                .requestMatchers(new AntPathRequestMatcher("/api/getUserById")).hasRole("USER")
+                .anyRequest().authenticated()
+                )
+                .sessionManagement(session -> session.maximumSessions(1)
+                        .maxSessionsPreventsLogin(true))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+                .formLogin(Customizer.withDefaults());
+
+        return http.build();
+    }
 
 
     ///  custom security filter chain for Basic Authentication method
@@ -154,18 +162,18 @@ public class SecurityConfig {
 
     ///  custom security filter chain for oauth2
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, CustomOauth2SuccessHandler customOauth2SuccessHandler) throws Exception {
-        http.authorizeHttpRequests(auth -> auth
-                        .anyRequest().authenticated())
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .oauth2Login(oauth -> oauth
-                        .successHandler(customOauth2SuccessHandler))
-                .addFilterBefore(new OAuthValidationFilter(oAuthTokenValidatorUtil), UsernamePasswordAuthenticationFilter.class)
-                .oauth2Login(Customizer.withDefaults());
-
-        return http.build();
-    }
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http, CustomOauth2SuccessHandler customOauth2SuccessHandler) throws Exception {
+//        http.authorizeHttpRequests(auth -> auth
+//                        .anyRequest().authenticated())
+//                .csrf(csrf -> csrf.disable())
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//                .oauth2Login(oauth -> oauth
+//                        .successHandler(customOauth2SuccessHandler))
+//                .addFilterBefore(new OAuthValidationFilter(oAuthTokenValidatorUtil), UsernamePasswordAuthenticationFilter.class)
+//                .oauth2Login(Customizer.withDefaults());
+//
+//        return http.build();
+//    }
 
 }

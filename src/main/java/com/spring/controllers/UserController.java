@@ -9,6 +9,8 @@ import com.spring.serivces.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +34,17 @@ public class UserController {
     @GetMapping("/users")
     public ResponseEntity<String> normalFetchApi(){
         return ResponseEntity.status(HttpStatus.OK).body("user details fetched successfully");
+    }
+
+
+    @GetMapping("/api/getUserAccess")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('read-data')")
+    @PostAuthorize("returnObject.body.id == authentication.principal.id")
+    public ResponseEntity<UserDetailsDTO> getUserAccess(){
+        UserDetailsDTO userDetailsDTO = new UserDetailsDTO();
+        userDetailsDTO.setId(2L);
+        userDetailsDTO.setName("sowrav");
+        return ResponseEntity.status(HttpStatus.OK).body(userDetailsDTO);
     }
 
     @PostMapping("/api/saveAddress")
